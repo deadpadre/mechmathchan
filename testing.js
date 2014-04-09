@@ -167,11 +167,12 @@ function authInfo(response) {
 			t++;
 		} else {
 			alert('stop clicking this button, you are already logged in');
+			alert('your id: ' + response.session.mid);
 			return;
 		}
 		caller();
   	} else {
-    	alert('not auth, try again');
+    	alert('Can\'t auth, try again');
   	}
 }
 
