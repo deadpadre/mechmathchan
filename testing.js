@@ -1,5 +1,77 @@
 VK.init({apiId: 3059896});
 
+var user_id = -1;
+var women = -1;
+
+function isWoman(user) {
+	return (user.sex == 1);
+}
+
+function alertObject(object) { 
+    var str = ""; 
+    for (var key in object) { 
+        str += key + ": "+ object[key] + "\r\n"; 
+    } 
+    console.log(str); 	
+} 
+
+function getRandomInt(min, max) {
+  return (Math.floor(Math.random() * (max - min + 1)) + min) % max;
+}
+
+function getExceptedRandomInt(min, max, excep) {
+	var temp = getRandomInt(min, max);
+	while (temp == excep) {
+		temp = getRandomInt(min, max);
+	}
+	return temp;
+}
+
+function chooseGirls() {
+	VK.Api.call('storage.get', {'keys': women.map(function(x) { return x.uid }).join(','), 'global': '1'}, function(counters) {
+		console.log(counters);
+		for (var i = 0; i < counters.response.length; i++) {
+			if (counters.response[i].value == '')
+				VK.Api.call('storage.set', {'key': women[i].uid, 'global': '1', 'value': '0 0'}, function(t) { console.log(t)});
+		}
+		var ind1 = getRandomInt(0, women.length);
+		var ind2 = getExceptedRandomInt(0, women.length, ind1);
+		test(women[ind1], women[ind2]);
+	});
+}
+
+function retrieveWomen(callback) {
+	console.log(typeof women);
+	VK.Api.call('groups.isMember', {'group_id': 'mechmath2012', 'user_id': user_id}, function(answer) {
+		alertObject(answer);
+		if (answer.response == 0) {
+			alert('access denied');
+		} else {
+			console.log('initial access granted');
+			VK.Api.call('users.get', {'fields': 'sex'}, function(val) {
+				if (val.response[0].sex == '1') {
+					alert('access denied');
+					console.log('access denied due to your sex');
+				} else {
+					console.log('keep on fixing');
+					VK.Api.call('groups.getMembers', {'group_id': 'mechmath2012', 'sort': 'id_asc', 'fields': 'sex,photo_200_orig'}, function(groupMembers) {
+						women = (groupMembers.response.users).filter(isWoman); 
+						callback();
+					});
+				}
+			});
+		}
+	});
+}
+
+function caller() {
+	if (typeof women == "number") {
+		retrieveWomen(chooseGirls);
+	} else {
+		chooseGirls();
+	}
+}
+
 function maximum(a ,b) {
 	if (a > b) {
 		return a;
@@ -24,64 +96,6 @@ function k(tries, hits) {
 	}
 }
 
-function alertObj(obj) { 
-    var str = ""; 
-    for(k in obj) { 
-        str += k+": "+ obj[k]+"\r\n"; 
-    } 
-    alert(str); 
-} 
-
-function getRandomInt(min, max) {
-  return (Math.floor(Math.random() * (max - min + 1)) + min) % max;
-}
-
-function getExceptedRandomInt(min, max, excep) {
-	var temp = getRandomInt(min, max);
-	while (temp == excep) {
-		temp = getRandomInt(min, max);
-	}
-	return temp;
-}
-
-function caller() {
-	VK.Api.call('groups.isMember', {'group_id': 'mechmath2012'}, function(answer) {
-		if (answer.response == '0') {
-			alert('access denied');
-			
-		} else {
-			VK.Auth.getLoginStatus(function(temp) {
-				VK.Api.call('users.get', {'uids': temp.session.mid, 'fields': 'sex'}, function(val) {
-					if (val.response[0].sex == '1') {
-						alert('access denied');
-					} else {
-						VK.Api.call('groups.getMembers', {'gid': 'mechmath2012'}, function(groups) {
-							VK.Api.call('users.get', {'uids': groups.response.users.join(','), 'fields': 'sex'}, function(info) {
-								VK.Api.call('storage.get', {'key': 'bla', 'keys': groups.response.users.join(','), 'global': '1'}, function(vals) {
-									var women = [];
-									for (var i = 0; i < vals.response.length; i++) {
-										if (info.response[i].sex == '1') {
-											women.push(info.response[i].uid);
-											if (vals.response[i].value == '') {
-												VK.Api.call('storage.set', {'key': groups.response.users[i], 'global': '1', 'value': '0 0'}, function(t) {});
-											}
-										}
-									}
-									var ind1 = getRandomInt(0, women.length);
-									var ind2 = getExceptedRandomInt(0, women.length, ind1);
-									VK.Api.call('users.get', {'uids': (women[ind1]+','+women[ind2]), 'fields': 'photo_big'}, function(back) {
-										test(back.response[0], back.response[1]);
-									});
-								});
-							});
-						});
-					}
-				})
-			});
-		}
-	});
-}
-
 function incr(users_id, tries, hits, e) {
 	VK.Api.call('storage.get', {'key': users_id, 'global': '1'}, function(val) {
 		var temp = val.response.split(' ');
@@ -93,11 +107,11 @@ function incr(users_id, tries, hits, e) {
 
 function test(left, right) {
 	var l_users_img = document.createElement('img');
-	l_users_img.src = left.photo_big;
+	l_users_img.src = left.photo_200_orig;
 	l_users_img.className = "image aligntop";
 	l_users_img.alt = "";
 	l_users_img.onclick = function() {
-		VK.Api.call('storage.get', {'key': 'bla', 'keys': left.uid + ',' + right.uid, 'global': '1'}, function(val) {
+		VK.Api.call('storage.get', {'keys': left.uid + ',' + right.uid, 'global': '1'}, function(val) {
 			var temp0 = val.response[0].value.split(' ')[0];
 			var temp1 = val.response[1].value.split(' ')[0];
 			incr(left.uid, 1, 1, elo(temp0, temp1));
@@ -116,11 +130,11 @@ function test(left, right) {
 	left_column.appendChild(l_users_img);
 	left_column.appendChild(l_users_info);
 	var r_users_img = document.createElement('img');
-	r_users_img.src = right.photo_big;
+	r_users_img.src = right.photo_200_orig;
 	r_users_img.className = "image aligntop";
 	r_users_img.alt = "";
 	r_users_img.onclick = function() {
-		VK.Api.call('storage.get', {'key': 'bla', 'keys': left.uid + ',' + right.uid, 'global': '1'}, function(val) {
+		VK.Api.call('storage.get', {'keys': left.uid + ',' + right.uid, 'global': '1'}, function(val) {
 			var temp0 = val.response[0].value.split(' ')[0];
 			var temp1 = val.response[1].value.split(' ')[0];
 			incr(left.uid, 1, 0, elo(temp0, temp1));
@@ -167,16 +181,17 @@ function authInfo(response) {
 			t++;
 		} else {
 			alert('stop clicking this button, you are already logged in');
-			alert('your id: ' + response.session.mid);
 			return;
 		}
+		user_id = parseInt(response.session.mid);
+		alert(user_id);
 		caller();
   	} else {
     	alert('Can\'t auth, try again');
   	}
 }
 
-VK.Auth.getLoginStatus (function checkAuth(response) {
+VK.Auth.getLoginStatus(function checkAuth(response) {
 	if (response.session) {
 		t = 1;
 		caller();
