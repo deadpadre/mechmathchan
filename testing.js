@@ -28,16 +28,9 @@ function getExceptedRandomInt(min, max, excep) {
 }
 
 function chooseGirls() {
-	VK.Api.call('storage.get', {'keys': women.map(function(x) { return x.uid }).join(','), 'global': '1'}, function(counters) {
-		console.log(counters);
-		for (var i = 0; i < counters.response.length; i++) {
-			if (counters.response[i].value == '')
-				VK.Api.call('storage.set', {'key': women[i].uid, 'global': '1', 'value': '0 0'}, function(t) { console.log(t)});
-		}
-		var ind1 = getRandomInt(0, women.length);
-		var ind2 = getExceptedRandomInt(0, women.length, ind1);
-		test(women[ind1], women[ind2]);
-	});
+	var ind1 = getRandomInt(0, women.length);
+	var ind2 = getExceptedRandomInt(0, women.length, ind1);
+	test(women[ind1], women[ind2]);
 }
 
 function retrieveWomen(callback) {
@@ -55,7 +48,14 @@ function retrieveWomen(callback) {
 				} else {
 					console.log('keep on fixing');
 					VK.Api.call('groups.getMembers', {'group_id': 'mechmath2012', 'sort': 'id_asc', 'fields': 'sex,photo_200_orig'}, function(groupMembers) {
-						women = (groupMembers.response.users).filter(isWoman); 
+						women = (groupMembers.response.users).filter(isWoman);
+						VK.Api.call('storage.get', {'keys': women.map(function(x) { return x.uid }).join(','), 'global': '1'}, function(counters) {
+							console.log(counters);
+							for (var i = 0; i < counters.response.length; i++) {
+								if (counters.response[i].value == '')
+									VK.Api.call('storage.set', {'key': women[i].uid, 'global': '1', 'value': '0 0'}, function(t) { console.log(t)});
+							}
+						});
 						callback();
 					});
 				}
