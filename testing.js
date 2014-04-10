@@ -7,14 +7,6 @@ function isWoman(user) {
 	return (user.sex == 1);
 }
 
-function alertObject(object) { 
-    var str = ""; 
-    for (var key in object) { 
-        str += key + ": "+ object[key] + "\r\n"; 
-    } 
-    console.log(str); 	
-} 
-
 function getRandomInt(min, max) {
   return (Math.floor(Math.random() * (max - min + 1)) + min) % max;
 }
@@ -36,7 +28,6 @@ function chooseGirls() {
 function retrieveWomen(callback) {
 	console.log(typeof women);
 	VK.Api.call('groups.isMember', {'group_id': 'mechmath2012', 'user_id': user_id}, function(answer) {
-		alertObject(answer);
 		if (answer.response == 0) {
 			alert('access denied');
 		} else {

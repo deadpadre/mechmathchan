@@ -1,12 +1,11 @@
-VK.init({apiId: 3059896});
+VK.init({apiId: 3059896}); 
 
-function alertObj(obj) { 
-    var str = ""; 
-    for(k in obj) { 
-        str += k+": "+ obj[k]+"\r\n"; 
-    } 
-    alert(str); 
-} 
+var user_id = -1;
+var women = -1;
+
+function isWoman(user) {
+	return (user.sex == 1);
+}
 
 function compareFunction(a, b) {
 	if (a.hits < b.hits) {
@@ -24,15 +23,15 @@ function compareFunction(a, b) {
 	}
 }
 
-function buildRating(users) {
-	users.sort(compareFunction);
+function buildRating() {
+	women.sort(compareFunction);
 	var content = document.createElement('div');
 	content.id = 'content';
-	for (var i = 0; i < 5; i++) {
+	for (var i = 0; i < 10; i++) {
 		var a_temp = document.createElement('a');
-		a_temp.href = 'http://vk.com/id' + users[i].uid;
+		a_temp.href = 'http://vk.com/id' + women[i].uid;
 		var temp = document.createElement('h1');
-		a_temp.innerHTML = users[i].first_name + ' ' + users[i].last_name;
+		a_temp.innerHTML = women[i].first_name + ' ' + women[i].last_name;
 		temp.innerHTML = (i + 1).toString() + '. '; 
 		temp.appendChild(a_temp);
 		temp.style.marginLeft = '27%';
@@ -44,30 +43,52 @@ function buildRating(users) {
 	var inner = document.createElement('div');
 	inner.id = 'inner';
 	inner.appendChild(page);
-	inner.al
 	document.getElementById('wrapper').insertBefore(inner, document.getElementById('page-bottom'));
 }
 
-function caller() {
-	VK.Api.call('groups.getMembers', {'gid': 'mechmath2012'}, function(groups) {
-		VK.Api.call('users.get', {'uids': groups.response.users.join(','), 'fields': 'sex'}, function(info) {
-			VK.Api.call('storage.get', {'key': 'bla', 'keys': groups.response.users.join(','), 'global': '1'}, function(vals) {
-				var women = [];
-				for (var i = 0; i < vals.response.length; i++) {
-					if (info.response[i].sex == '1') {
-						if (vals.response[i].value == '') {
-							VK.Api.call('storage.set', {'key': groups.response.users[i], 'global': '1', 'value': '1500 0'}, function(t) {});
-							women.push({uid: info.response[i].uid, tries: 0, hits: 1500, first_name: info.response[i].first_name, last_name: info.response[i].last_name});
-						} else {
-							var temp = vals.response[i].value.split(' ');
-							women.push({uid: info.response[i].uid, tries: parseInt(temp[1]), hits: parseInt(temp[0]), first_name: info.response[i].first_name, last_name: info.response[i].last_name});
-						}
-					}
+function retrieveWomen(callback) {
+	console.log(typeof women);
+	VK.Api.call('groups.isMember', {'group_id': 'mechmath2012', 'user_id': user_id}, function(answer) {
+		if (answer.response == 0) {
+			alert('access denied');
+		} else {
+			console.log('initial access granted');
+			VK.Api.call('users.get', {'fields': 'sex'}, function(val) {
+				if (val.response[0].sex == '1') {
+					alert('access denied');
+					console.log('access denied due to your sex');
+				} else {
+					console.log('keep on fixing');
+					VK.Api.call('groups.getMembers', {'group_id': 'mechmath2012', 'sort': 'id_asc', 'fields': 'sex,photo_200_orig'}, function(groupMembers) {
+						women = (groupMembers.response.users).filter(isWoman);
+						VK.Api.call('storage.get', {'keys': women.map(function(x) { return x.uid }).join(','), 'global': '1'}, function(counters) {
+							console.log(counters);
+							console.log(women.length);
+							for (var i = 0; i < women.length; i++) {
+								women[i] = {
+									uid: women[i].uid,
+									first_name: women[i].first_name,
+									last_name: women[i].last_name,
+									hits: parseInt(counters.response[i].value.split(' ')[0]),
+									tries: parseInt(counters.response[i].value.split(' ')[1])
+								}
+								console.log(women[i]);
+							}
+							for (var i = 0; i < counters.response.length; i++) {
+								if (counters.response[i].value == '')
+									VK.Api.call('storage.set', {'key': women[i].uid, 'global': '1', 'value': '0 0'}, function(t) { console.log(t)});
+							}
+							callback();
+						});
+					});
 				}
-				buildRating(women);
 			});
-		});
-	});	
+		}
+	});
+}
+
+function caller() {
+	retrieveWomen(buildRating);
 }
 
 var t = 0;
@@ -76,18 +97,19 @@ function authInfo(response) {
 	if (response.session) {
 		if (t == 0) {
 			t++;
-			alert('successful');
 		} else {
-			alert('stop clicking this button');
+			alert('stop clicking this button, you are already logged in');
 			return;
 		}
+		user_id = parseInt(response.session.mid);
+		alert(user_id);
 		caller();
   	} else {
-    	alert('not auth, try again');
+    	alert('Can\'t auth, try again');
   	}
 }
 
-VK.Auth.getLoginStatus (function checkAuth(response) {
+VK.Auth.getLoginStatus(function checkAuth(response) {
 	if (response.session) {
 		t = 1;
 		caller();
