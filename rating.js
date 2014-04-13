@@ -27,15 +27,20 @@ function buildRating() {
 	women.sort(compareFunction);
 	var content = document.createElement('div');
 	content.id = 'content';
-	for (var i = 0; i < 10; i++) {
-		var a_temp = document.createElement('a');
-		a_temp.href = 'http://vk.com/id' + women[i].uid;
-		var temp = document.createElement('h1');
-		a_temp.innerHTML = women[i].first_name + ' ' + women[i].last_name;
-		temp.innerHTML = (i + 1).toString() + '. '; 
-		temp.appendChild(a_temp);
-		temp.style.marginLeft = '27%';
-		content.appendChild(temp);
+	for (var i = 0; i < 8; i++) {
+		var divTemp = document.createElement('div');
+		divTemp.className = "rating-item";
+		var imageTemp = document.createElement('img');
+		imageTemp.src = women[i].photo_50;
+		var linkTemp = document.createElement('a');
+		linkTemp.href = 'http://vk.com/id' + women[i].uid;
+		var headerTemp = document.createElement('h1');
+		linkTemp.innerHTML = women[i].first_name + ' ' + women[i].last_name;
+//		headerTemp.innerHTML = (i + 1).toString() + '. '; 
+		headerTemp.appendChild(linkTemp);
+		divTemp.appendChild(imageTemp);
+		divTemp.appendChild(headerTemp);
+		content.appendChild(divTemp);
 	}
 	var page = document.createElement('div');
 	page.id = 'page';
@@ -59,7 +64,7 @@ function retrieveWomen(callback) {
 					console.log('access denied due to your sex');
 				} else {
 					console.log('keep on fixing');
-					VK.Api.call('groups.getMembers', {'group_id': 'mechmath2012', 'sort': 'id_asc', 'fields': 'sex,photo_200_orig'}, function(groupMembers) {
+					VK.Api.call('groups.getMembers', {'group_id': 'mechmath2012', 'sort': 'id_asc', 'fields': 'sex,photo_50'}, function(groupMembers) {
 						women = (groupMembers.response.users).filter(isWoman);
 						VK.Api.call('storage.get', {'keys': women.map(function(x) { return x.uid }).join(','), 'global': '1'}, function(counters) {
 							console.log(counters);
@@ -70,7 +75,8 @@ function retrieveWomen(callback) {
 									first_name: women[i].first_name,
 									last_name: women[i].last_name,
 									hits: parseInt(counters.response[i].value.split(' ')[0]),
-									tries: parseInt(counters.response[i].value.split(' ')[1])
+									tries: parseInt(counters.response[i].value.split(' ')[1]),
+									photo_50: women[i].photo_50
 								}
 								console.log(women[i]);
 							}
