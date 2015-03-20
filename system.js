@@ -27,7 +27,7 @@ function buildRating() {
 	women.sort(compareFunction);
 	var content = document.createElement('div');
 	content.id = 'content';
-	for (var i = 0; i < 10; i++) {
+	for (var i = 0; i < women.length; i++) {
 		var a_temp = document.createElement('a');
 		a_temp.href = 'http://vk.com/id' + women[i].uid;
 		var temp = document.createElement('h1');
@@ -69,8 +69,8 @@ function retrieveWomen(callback) {
 									uid: women[i].uid,
 									first_name: women[i].first_name,
 									last_name: women[i].last_name,
-									hits: counters.response[i].value.split(' ')[0],
-									tries: counters.response[i].value.split(' ')[1]
+									hits: parseInt(counters.response[i].value.split(' ')[0]),
+									tries: parseInt(counters.response[i].value.split(' ')[1])
 								}
 								console.log(women[i]);
 							}

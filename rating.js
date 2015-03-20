@@ -1,114 +1,136 @@
 VK.init({apiId: 3059896}); 
 
-var user_id = -1;
+var VK_ID_LINK 		= 'http://vk.com/id';
+var VK_GROUPNAME 	= 'mechmath2012';
+var userId = -1;
 
-function isWoman(user) {
-	return (user.sex == 1);
+function User(vkUserObj, hits, tries) {
+	this.sex = vkUserObj.sex;
+	this.firstName = vkUserObj.first_name;
+	this.lastName = vkUserObj.last_name;
+	this.uid = vkUserObj.uid;
+	this.smallPhoto = vkUserObj.photo_50;
+	this.hits = hits;
+	this.tries = tries;
 }
 
-function compareFunction(a, b) {
-	if (a.hits < b.hits) {
+User.prototype.isWoman = function() {
+	return (this.sex == 1);
+};
+
+User.prototype.compare = function(other) {
+	if (this.hits < other.hits) {
 		return 1;
-	} else if (a.hits > b.hits) {
+	} else if (this.hits > other.hits) {
 		return -1;
 	} else {
-		if (a.tries < b.tries) {
+		if (this.tries < other.tries) {
 			return 1;
-		} else if (a.tries > b.tries) {
+		} else if (this.tries > other.tries) {
 			return -1;
 		} else {
 			return 0;
 		}
 	}
-}
+};
 
-function buildRating() {
-	women.sort(compareFunction);
-	var content = document.createElement('div');
-	content.id = 'content';
-	for (var i = 0; i < 10; i++) {
-		var a_temp = document.createElement('a');
-		a_temp.href = 'http://vk.com/id' + women[i].uid;
-		var temp = document.createElement('h1');
-		a_temp.innerHTML = women[i].first_name + ' ' + women[i].last_name;
-		temp.innerHTML = (i + 1).toString() + '. '; 
-		temp.appendChild(a_temp);
-		temp.style.marginLeft = '27%';
-		content.appendChild(temp);
+// using innerHTML in attributes may seem quite a hack, but whatever.
+var createSpecifiedElement = function(tag, attributes, styles) {
+	var element = document.createElement(tag);
+	for (var key in attributes) {
+		element[key] = attributes[key];
 	}
-	var page = document.createElement('div');
-	page.id = 'page';
+	for (key in styles) {
+		element.style[key] = styles[key];
+	}
+	return element;
+};
+
+var viewUsers = function(users) {
+	var content = createSpecifiedElement('div', {
+		id : 'content'
+	});
+	for (var i = 0; i < 10; i++) {
+		var tempDiv			= createSpecifiedElement('div', { className : 'rating-item' });
+		var tempImage		= createSpecifiedElement('img', { src : users[i].smallPhoto });
+		var tempLink 		= createSpecifiedElement('a', {
+			href				: VK_ID_LINK + users[i].uid,
+			innerHTML 	: users[i].firstName + ' ' + users[i].lastName
+		});
+		var tempHeader 	= createSpecifiedElement('h1');
+		tempHeader.appendChild(tempLink);
+		tempDiv.appendChild(tempImage);
+		tempDiv.appendChild(tempHeader);
+		content.appendChild(tempDiv);
+	}
+	var page = createSpecifiedElement('div', { id : 'page' });
 	page.appendChild(content);
-	var inner = document.createElement('div');
-	inner.id = 'inner';
+	var inner = createSpecifiedElement('div', { id : 'inner' });
 	inner.appendChild(page);
 	document.getElementById('wrapper').insertBefore(inner, document.getElementById('page-bottom'));
-}
+};
 
-function retrieveWomen(callback) {
-	console.log(typeof women);
-	VK.Api.call('groups.isMember', {'group_id': 'mechmath2012', 'user_id': user_id}, function(answer) {
-		if (answer.response == 0) {
-			alert('access denied');
-		} else {
-			console.log('initial access granted');
-			VK.Api.call('users.get', {'fields': 'sex'}, function(val) {
-				if (val.response[0].sex == '1') {
-					alert('access denied');
-					console.log('access denied due to your sex');
-				} else {
-					console.log('keep on fixing');
-					VK.Api.call('groups.getMembers', {'group_id': 'mechmath2012', 'sort': 'id_asc', 'fields': 'sex,photo_200_orig'}, function(groupMembers) {
-						women = (groupMembers.response.users).filter(isWoman);
-						VK.Api.call('storage.get', {'keys': women.map(function(x) { return x.uid }).join(','), 'global': '1'}, function(counters) {
-							console.log(counters);
-							for (var i = 0; i < women.length; i++) {
-								women[i] = {
-									uid: women[i].uid,
-									first_name: women[i].first_name,
-									last_name: women[i].last_name,
-									hits: counters.response[i].value.split(' ')[0],
-									tries: counters.response[i].value.split(' ')[1]
-								}
-							}
-							for (var i = 0; i < counters.response.length; i++) {
-								if (counters.response[i].value == '')
-									VK.Api.call('storage.set', {'key': women[i].uid, 'global': '1', 'value': '0 0'}, function(t) { console.log(t)});
-							}
-						});
-						callback();
-					});
+var showDenialMessage = function(reason) {
+	if (typeof reason == 'undefined') {
+		reason = "just 'cause";
+	}
+	console.log('access denied: ' + reason + '.');
+};
+
+function getFemaleMembersRated(groupname, callback) {
+	VK.Api.call('groups.getMembers', {
+		'group_id': groupname,
+		'sort'		: 'id_asc',
+		'fields': 'sex,photo_50'
+	}, function(groupMembers) {
+		var women = groupMembers.response.users.map(function(element) {
+			return new User(element);
+		}).filter(function(element) {
+			return element.isWoman();
+		});
+		VK.Api.call('storage.get', {
+				'keys' : women.map(function(x) {
+					return x.uid;
+				}).join(','),
+				'global' : '1'
+			}, function(counters) {
+				for (var i = 0; i < women.length; i++) {
+					women[i].hits 	= parseFloat(counters.response[i].value.split(' ')[0]);
+					women[i].tries	= parseFloat(counters.response[i].value.split(' ')[1]);
 				}
-			});
-		}
+				for (i = 0; i < counters.response.length; i++) {
+					if (counters.response[i].value === '') {
+						VK.Api.call('storage.set', {
+							'key' 	: women[i].uid,
+							'global': '1',
+							'value'	: '0 0'
+						}, console.log);
+					}
+				}
+				callback(women);
+		});
 	});
 }
 
 function caller() {
-	retrieveWomen(buildRating);
+	getFemaleMembersRated(VK_GROUPNAME, function(users) {
+		viewUsers(users.sort(function(a, b) {
+			return a.compare(b);
+		}));
+	});
 }
-
-var t = 0;
 
 function authInfo(response) {
 	if (response.session) {
-		if (t == 0) {
-			t++;
-		} else {
-			alert('stop clicking this button, you are already logged in');
-			return;
-		}
-		user_id = parseInt(response.session.mid);
-		alert(user_id);
+		userId = parseInt(response.session.mid);
 		caller();
   	} else {
-    	alert('Can\'t auth, try again');
+    	showDenialMessage("can't authenticate");
   	}
 }
 
 VK.Auth.getLoginStatus(function checkAuth(response) {
 	if (response.session) {
-		t = 1;
 		caller();
 	}
 });
